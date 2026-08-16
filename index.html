@@ -211,6 +211,16 @@
   .ssr-cover .cn{font-size:8vw;font-weight:900;color:#FFE9A8;text-shadow:0 0 22px rgba(255,201,60,.6);opacity:0;word-break:keep-all;text-align:center;padding:0 6vw;}
   .ssr-cover.show .cn{animation:cnPop .9s ease .14s forwards;}
   @keyframes cnPop{0%{opacity:0;transform:translateY(14px);}45%{opacity:1;transform:none;}100%{opacity:1;}}
+  /* SR fake-out: opens gold like SSR, then sags into purple SR */
+  .ssr-cover.srfake.show{animation:srfIn .6s ease forwards;}
+  @keyframes srfIn{0%{opacity:0;}55%{opacity:1;}100%{opacity:1;}}
+  .ssr-cover.srfake.fizzle{animation:srfOut 1.05s ease forwards;}
+  @keyframes srfOut{0%{opacity:1;}72%{opacity:1;}100%{opacity:0;}}
+  .ssr-cover.srfake.fizzle .cr{
+    background:linear-gradient(180deg,#E6D8FF,#B15CFF 60%,#7A3FD0);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 22px rgba(177,92,255,.7));animation:srSag .95s cubic-bezier(.3,.7,.3,1) forwards;}
+  @keyframes srSag{0%{transform:scale(1.12);opacity:1;}28%{transform:scale(.78) translateY(16px) rotate(-4deg);opacity:.85;}
+    55%{transform:scale(.9) translateY(2px) rotate(1deg);opacity:1;}100%{transform:scale(.88);opacity:1;}}
 
   /* ---------- light mode ---------- */
   @media (prefers-color-scheme: light){
@@ -256,9 +266,8 @@
   .mute{position:fixed;top:calc(12px + env(safe-area-inset-top));right:14px;z-index:72;width:40px;height:40px;border-radius:50%;
     border:1px solid var(--panel-line);background:rgba(25,21,39,.7);color:var(--text);font-size:17px;line-height:1;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:border-color .2s,background .2s,box-shadow .2s,transform .12s;}
   .mute:active{transform:scale(.9);}
-  .mute.bgm{right:62px;opacity:.72;}
-  .mute.bgm.on{opacity:1;border-color:var(--accent);background:rgba(255,62,127,.2);box-shadow:0 0 16px -3px var(--accent);animation:bgmPulse 2s ease-in-out infinite;}
-  @keyframes bgmPulse{0%,100%{box-shadow:0 0 14px -4px var(--accent);}50%{box-shadow:0 0 22px 0 var(--accent);}}
+  .mute.on{border-color:var(--accent);background:rgba(255,62,127,.16);animation:sndPulse 2.4s ease-in-out infinite;}
+  @keyframes sndPulse{0%,100%{box-shadow:0 0 12px -5px var(--accent);}50%{box-shadow:0 0 20px -1px var(--accent);}}
   .winner{position:relative;overflow:hidden;}
   .winner::before{content:"";position:absolute;inset:0;pointer-events:none;background:rgba(255,201,60,.14);
     -webkit-mask:var(--rune-mask) right center/auto 160% no-repeat;mask:var(--rune-mask) right center/auto 160% no-repeat;opacity:.6;}
@@ -345,8 +354,7 @@
 <div class="cutscene" id="cutscene"></div>
 <div class="pillar" id="pillar"></div>
 <div class="toast" id="toast"></div>
-<button class="mute bgm" id="bgmBtn" aria-label="배경음악 켜기/끄기" aria-pressed="false">🎵</button>
-<button class="mute" id="muteBtn" aria-label="소리 켜기/끄기">🔊</button>
+<button class="mute on" id="muteBtn" aria-label="소리 켜기/끄기">🔊</button>
 
 <script>
 (function(){
@@ -388,15 +396,27 @@
     const idx=names.map((_,i)=>i); shuffle(idx);
     const ssrIdx=idx.slice(0,ssrCount);
     const loserIdx=idx.slice(ssrCount);
-    // distribute N/R/SR as evenly as possible among non-SSR people
-    const grades=['N','R','SR']; const loserGrades=[];
-    for(let i=0;i<loserIdx.length;i++) loserGrades.push(grades[i%3]);
+    // weighted N/R/SR among non-SSR people: more N, fewer SR
+    const L=loserIdx.length;
+    const nN=Math.round(L*0.46), nSR=Math.round(L*0.20), nR=Math.max(0,L-nN-nSR);
+    const loserGrades=[];
+    for(let i=0;i<nN;i++) loserGrades.push('N');
+    for(let i=0;i<nR;i++) loserGrades.push('R');
+    for(let i=0;i<nSR;i++) loserGrades.push('SR');
+    while(loserGrades.length<L) loserGrades.push('N');
     shuffle(loserGrades);
     const gradeOf={};
     ssrIdx.forEach(i=>gradeOf[i]='SSR');
     loserIdx.forEach((i,k)=>gradeOf[i]=loserGrades[k]);
     const people=names.map((name,i)=>({name,grade:gradeOf[i]}));
-    const pool=people.slice(); shuffle(pool);      // draw order (random assignment on click)
+    const pool=people.slice(); shuffle(pool);      // draw order (pool.pop() reveals from the end)
+    // hold one SSR back so it can't come out early — reveal it in the last ~30%
+    const ssrAt=pool.map((p,i)=>p.grade==='SSR'?i:-1).filter(i=>i>=0);
+    if(ssrAt.length && pool.length>3){
+      const [held]=pool.splice(ssrAt[ssrAt.length-1],1);   // pull one SSR out
+      const lateZone=Math.max(1,Math.floor(pool.length*0.30)); // front of array = popped last = late
+      pool.splice(Math.floor(Math.random()*lateZone),0,held);
+    }
     state={people,pool,slots:people.length,revealed:0,ssrCount,busy:false,ssrShown:0};
   }
   function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
@@ -448,12 +468,19 @@
           state.busy=false; checkDone();
         });
       }
+    } else if(person.grade==='SR'){
+      // fake-out: opens exactly like an SSR summon, then deflates to SR
+      srFakeout(person,()=>{
+        flipSlot(slot,person,true);
+        state.revealed++; remainEl.textContent=state.slots-state.revealed;
+        burst(RARITY.SR.color,28); sfx('reveal_SR');
+        state.busy=false; checkDone();
+      });
     } else {
       chargeAndReveal(slot,person,()=>{
         flipSlot(slot,person,true);
         state.revealed++; remainEl.textContent=state.slots-state.revealed;
         sfx('reveal_'+person.grade);
-        if(person.grade==='SR') burst(RARITY.SR.color,26);
         state.busy=false; checkDone();
       });
     }
@@ -655,6 +682,23 @@
     setTimeout(()=>{ cover.classList.add('show'); sfx('ssr'); if(navigator.vibrate) navigator.vibrate(45); },540);
     setTimeout(()=>{ p.classList.remove('on'); p.innerHTML=''; cb&&cb(); },1650);
   }
+  // SR fake-out: identical SSR build-up, then it fizzles down to SR
+  function srFakeout(person,cb){
+    if(reduce()){ sfx('reveal_SR'); cb&&cb(); return; }
+    sfx('ssr_rise');                                  // same tension cue as SSR
+    const p=$('#pillar'); p.classList.add('on');
+    p.innerHTML='<div class="pdim"></div><div class="beam"></div>'+
+      '<div class="ssr-cover srfake" id="ssrCover"><div class="cr">SSR</div></div>';
+    if(navigator.vibrate) navigator.vibrate([20,40,30]);
+    const cover=p.querySelector('#ssrCover'), cr=cover.querySelector('.cr');
+    setTimeout(()=>{ quickFlash(RARITY.SSR.color); },520);   // gold flash — still looks like a win
+    setTimeout(()=>{ cover.classList.add('show'); if(navigator.vibrate) navigator.vibrate(40); },540);
+    setTimeout(()=>{                                          // the let-down
+      sfx('deflate'); cover.classList.add('fizzle'); cr.textContent='SR';
+      quickFlash(RARITY.SR.color); if(navigator.vibrate) navigator.vibrate([60,40,20]);
+    },1080);
+    setTimeout(()=>{ p.classList.remove('on'); p.innerHTML=''; cb&&cb(); },2150);
+  }
 
   // ---- sound (Web Audio, no files) \u2014 grand reverb bus ----
   let actx=null, muted=false, master=null, revConv=null;
@@ -664,8 +708,8 @@
         const AC=window.AudioContext||window.webkitAudioContext;
         actx=new AC();
         master=actx.createGain(); master.gain.value=0.9; master.connect(actx.destination);
-        revConv=actx.createConvolver(); revConv.buffer=makeImpulse(2.6,3.0);   // cavernous tail
-        const rg=actx.createGain(); rg.gain.value=0.85; revConv.connect(rg); rg.connect(master);
+        revConv=actx.createConvolver(); revConv.buffer=makeImpulse(3.6,2.6);   // longer cavernous tail
+        const rg=actx.createGain(); rg.gain.value=0.98; revConv.connect(rg); rg.connect(master);
       }catch(e){ actx=null; }
     }
     return actx;
@@ -715,27 +759,47 @@
   function sfx(kind){
     const c=ac(); if(!c||muted) return; const t=c.currentTime;
     if(kind==='summon'){                                    // grand magic-circle boom
-      voice({type:'sine',f:38,f2:150,dur:1.6,a:0.3,g:0.55,rev:0.55});
-      voice({type:'sine',f:76,f2:300,dur:1.3,a:0.25,g:0.26,rev:0.6,lp:800});
-      noise({dur:0.7,ft:'lowpass',ff:700,g:0.4,rev:0.7});
-      [392,523.25,659.25,783.99,1046.5].forEach((f,i)=>voice({type:'triangle',f:f,t:t+0.12+i*0.03,dur:2.2,a:0.02,g:0.07,rev:0.9}));
-      voice({type:'sine',f:880,f2:1760,t:t+0.05,dur:1.0,a:0.01,g:0.13,rev:0.7});
+      voice({type:'sine',f:30,f2:120,dur:2.1,a:0.35,g:0.62,rev:0.62});     // deep sub swell
+      voice({type:'sine',f:60,f2:240,dur:1.7,a:0.3,g:0.34,rev:0.68,lp:900});
+      noise({dur:0.95,ft:'lowpass',ff:600,g:0.5,rev:0.9});                 // gong body
+      noise({dur:0.4,ft:'bandpass',ff:170,q:1.2,g:0.34,rev:0.75});         // gong low ring
+      [261.63,392,523.25,659.25,783.99,1046.5].forEach((f,i)=>voice({type:'triangle',f:f,t:t+0.14+i*0.03,dur:2.7,a:0.02,g:0.08,rev:0.98}));
+      voice({type:'sine',f:880,f2:1760,t:t+0.05,dur:1.2,a:0.01,g:0.14,rev:0.78});
     }
     else if(kind==='tick') voice({type:'triangle',f:680,dur:0.06,a:0.004,g:0.10,rev:0.15});
     else if(kind==='tease'){ voice({type:'sine',f:1046,dur:0.14,g:0.15,rev:0.4}); voice({type:'sine',f:1568,dur:0.14,g:0.08,rev:0.4}); }
     else if(kind==='reveal_N'){ voice({type:'sine',f:200,dur:0.18,g:0.15,rev:0.25}); voice({type:'sine',f:100,dur:0.16,g:0.1}); }
     else if(kind==='reveal_R'){ [330,440].forEach(f=>voice({type:'triangle',f:f,dur:0.24,g:0.11,rev:0.35})); voice({type:'sine',f:165,dur:0.3,g:0.12,rev:0.3,lp:500}); }
     else if(kind==='reveal_SR'){ [440,554,659].forEach((f,i)=>voice({type:'triangle',f:f,t:t+i*0.02,dur:0.42,g:0.11,rev:0.5})); voice({type:'sine',f:110,f2:220,dur:0.5,g:0.28,rev:0.4,lp:600}); noise({dur:0.4,ft:'highpass',ff:3000,g:0.07,rev:0.5}); }
-    else if(kind==='ssr_rise'){ voice({type:'sawtooth',f:110,f2:880,dur:0.95,a:0.06,g:0.12,rev:0.6,lp:1300}); voice({type:'sine',f:55,f2:110,dur:0.95,a:0.1,g:0.3,rev:0.4}); }
-    else if(kind==='ssr'){                                  // full payoff: sub boom + bright chord + crash
-      voice({type:'sine',f:55,f2:165,dur:1.1,g:0.5,rev:0.6,lp:500});
-      [523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>voice({type:'triangle',f:f,t:t+i*0.05,dur:1.4,g:0.13,rev:0.8}));
-      voice({type:'sine',f:1568,t:t+0.42,dur:0.8,g:0.09,rev:0.6});
-      noise({dur:0.6,ft:'highpass',ff:2500,g:0.15,rev:0.6});
+    else if(kind==='deflate'){                              // 맥 빠지는 하강음 (SR fake-out)
+      voice({type:'sawtooth',f:440,f2:70,dur:1.0,a:0.02,g:0.2,rev:0.4,lp:1100});
+      voice({type:'sine',f:220,f2:55,dur:1.0,a:0.02,g:0.16,rev:0.35});
+      voice({type:'triangle',f:330,f2:90,dur:0.85,a:0.02,g:0.09,rev:0.3});
+      noise({dur:0.5,ft:'lowpass',ff:420,g:0.1,rev:0.3});
+    }
+    else if(kind==='ssr_rise'){                             // bigger tension build
+      voice({type:'sawtooth',f:110,f2:990,dur:1.15,a:0.06,g:0.16,rev:0.7,lp:1500});
+      voice({type:'sine',f:44,f2:110,dur:1.15,a:0.1,g:0.36,rev:0.5});
+      voice({type:'triangle',f:220,f2:880,dur:1.15,a:0.08,g:0.08,rev:0.6});
+    }
+    else if(kind==='ssr'){                                  // full payoff: huge sub + bright chord + crash
+      voice({type:'sine',f:44,f2:174,dur:1.5,g:0.62,rev:0.68,lp:520});
+      voice({type:'sine',f:88,f2:174,dur:1.2,g:0.3,rev:0.6,lp:700});
+      [523.25,659.25,783.99,1046.5,1318.5,1567.98].forEach((f,i)=>voice({type:'triangle',f:f,t:t+i*0.05,dur:1.8,g:0.14,rev:0.92}));
+      voice({type:'sine',f:1568,t:t+0.42,dur:1.0,g:0.1,rev:0.7});
+      noise({dur:0.8,ft:'highpass',ff:2200,g:0.2,rev:0.72});               // crash
+      noise({dur:0.5,ft:'lowpass',ff:500,g:0.3,rev:0.7});                  // low boom body
     }
   }
+  // one button controls everything (SFX + BGM together)
   const muteBtn=$('#muteBtn');
-  if(muteBtn) muteBtn.addEventListener('click',()=>{ muted=!muted; muteBtn.textContent=muted?'\uD83D\uDD07':'\uD83D\uDD0A'; if(!muted) resumeAudio(); });
+  function applySound(){
+    if(muted){ bgmStop(); if(muteBtn){ muteBtn.textContent='\uD83D\uDD07'; muteBtn.classList.remove('on'); } }
+    else { resumeAudio(); bgmStart(); if(muteBtn){ muteBtn.textContent='\uD83D\uDD0A'; muteBtn.classList.add('on'); } }
+  }
+  if(muteBtn) muteBtn.addEventListener('click',()=>{ muted=!muted; applySound(); });
+  // BGM plays from the first interaction (browsers block autoplay before a gesture)
+  addEventListener('pointerdown',function kick(){ resumeAudio(); if(!muted) applySound(); }, {once:true});
 
   // ---- BGM: dreamy summon synth loop (Am\u2013F\u2013C\u2013G) ----
   let bgmOn=false, bgmGain=null, bgmTimer=null, bgmStep=0, bgmNext=0;
@@ -778,7 +842,7 @@
     if(bgmOn) return true;
     bgmOn=true;
     bgmGain=c.createGain(); bgmGain.gain.value=0.0001; bgmGain.connect(master);
-    bgmGain.gain.exponentialRampToValueAtTime(0.16, c.currentTime+1.2);
+    bgmGain.gain.exponentialRampToValueAtTime(0.34, c.currentTime+1.2);
     const send=c.createGain(); send.gain.value=0.45; bgmGain.connect(send); send.connect(revConv);
     bgmStep=0; bgmNext=c.currentTime+0.12; bgmLoop();
     return true;
@@ -791,9 +855,6 @@
       g.gain.exponentialRampToValueAtTime(0.0001,now+0.6);
       setTimeout(()=>{try{g.disconnect();}catch(e){}},900); bgmGain=null; }
   }
-  function bgmToggle(){ return bgmOn ? (bgmStop(),false) : bgmStart(); }
-  const bgmBtn=$('#bgmBtn');
-  if(bgmBtn) bgmBtn.addEventListener('click',()=>{ const on=bgmToggle(); bgmBtn.classList.toggle('on',!!on); bgmBtn.setAttribute('aria-pressed',on?'true':'false'); });
 
   // ---- per-card charge: slow build with rising "둥…둥…둥↑" hits + near-miss ----
   function chargeAndReveal(slot,person,done){
