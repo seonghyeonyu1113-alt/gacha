@@ -194,33 +194,43 @@
   @keyframes spinCCW{to{transform:rotate(-360deg);}}
   .pillar{position:fixed;inset:0;z-index:64;pointer-events:none;display:none;overflow:hidden;}
   .pillar.on{display:block;}
-  .pdim{position:absolute;inset:0;background:rgba(6,4,12,.6);opacity:0;animation:pdim 1.08s ease;}
-  @keyframes pdim{0%{opacity:0;}18%{opacity:1;}82%{opacity:1;}100%{opacity:0;}}
+  .pdim{position:absolute;inset:0;background:rgba(6,4,12,.6);opacity:0;animation:pdim 2.7s ease forwards;}
+  @keyframes pdim{0%{opacity:0;}7%{opacity:1;}88%{opacity:1;}100%{opacity:0;}}
   .beam{position:absolute;top:0;bottom:0;left:50%;width:0;transform:translateX(-50%);filter:blur(2px);
     background:linear-gradient(90deg, rgba(255,201,60,0), rgba(255,235,150,.9) 45%, #FFFFFF 50%, rgba(255,235,150,.9) 55%, rgba(255,201,60,0));
     animation:beam 1.08s cubic-bezier(.6,0,.3,1);}
   @keyframes beam{0%{width:0;opacity:0;}22%{width:16px;opacity:1;}52%{width:70px;opacity:1;}74%{width:150px;opacity:1;}100%{width:100vw;opacity:0;}}
-  .ssr-cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1vh;opacity:0;background:var(--ssr-cover-bg);}
-  .ssr-cover.show{animation:ssrCover 1.05s ease forwards;}
-  @keyframes ssrCover{0%{opacity:0;}16%{opacity:1;}78%{opacity:1;}100%{opacity:0;}}
-  .ssr-cover .cr{font-family:'Black Han Sans',sans-serif;font-size:24vw;line-height:1;letter-spacing:4px;transform:scale(.5);opacity:0;
+  /* cover: NAME lands first (기대!), grade resolves after */
+  .ssr-cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5vh;opacity:0;background:var(--ssr-cover-bg);}
+  .ssr-cover.show{animation:coverIn .38s ease forwards;}
+  @keyframes coverIn{from{opacity:0;}to{opacity:1;}}
+  .ssr-cover.out{animation:coverOut .42s ease forwards;}
+  @keyframes coverOut{from{opacity:1;}to{opacity:0;}}
+  /* the name — big, arrives first, then breathes while you wait */
+  .ssr-cover .cn{font-size:11vw;font-weight:900;color:#FFE9A8;text-shadow:0 0 26px rgba(255,201,60,.65);opacity:0;
+    word-break:keep-all;text-align:center;padding:0 6vw;line-height:1.15;}
+  .ssr-cover.show .cn{animation:cnPop .62s cubic-bezier(.2,1.4,.4,1) forwards;}
+  @keyframes cnPop{0%{opacity:0;transform:translateY(22px) scale(.86);}60%{opacity:1;transform:translateY(0) scale(1.05);}100%{opacity:1;transform:scale(1);}}
+  .ssr-cover.show .cn{animation:cnPop .62s cubic-bezier(.2,1.4,.4,1) forwards, cnBreathe 1.05s ease-in-out .62s infinite alternate;}
+  @keyframes cnBreathe{from{text-shadow:0 0 20px rgba(255,201,60,.5);transform:scale(1);}to{text-shadow:0 0 42px rgba(255,201,60,.95);transform:scale(1.035);}}
+  .ssr-cover.resolved .cn{animation:cnPop .62s cubic-bezier(.2,1.4,.4,1) forwards;}
+  /* the grade slot — "?" teases, then resolves to SSR or SR */
+  .ssr-cover .cr{font-family:'Black Han Sans',sans-serif;font-size:22vw;line-height:1;letter-spacing:4px;opacity:0;transform:scale(.6);
     background:linear-gradient(180deg,#FFF7DA,#FFC93C 60%,#FF8A3D);-webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 0 34px rgba(255,201,60,.75));}
-  .ssr-cover.show .cr{animation:crPop .95s cubic-bezier(.2,1.5,.4,1) forwards;}
-  @keyframes crPop{0%{transform:scale(.5);opacity:0;}32%{transform:scale(1.07);opacity:1;}100%{transform:scale(1);opacity:1;}}
-  .ssr-cover .cn{font-size:8vw;font-weight:900;color:#FFE9A8;text-shadow:0 0 22px rgba(255,201,60,.6);opacity:0;word-break:keep-all;text-align:center;padding:0 6vw;}
-  .ssr-cover.show .cn{animation:cnPop .9s ease .14s forwards;}
-  @keyframes cnPop{0%{opacity:0;transform:translateY(14px);}45%{opacity:1;transform:none;}100%{opacity:1;}}
-  /* SR fake-out: opens gold like SSR, then sags into purple SR */
-  .ssr-cover.srfake.show{animation:srfIn .6s ease forwards;}
-  @keyframes srfIn{0%{opacity:0;}55%{opacity:1;}100%{opacity:1;}}
-  .ssr-cover.srfake.fizzle{animation:srfOut 1.05s ease forwards;}
-  @keyframes srfOut{0%{opacity:1;}72%{opacity:1;}100%{opacity:0;}}
-  .ssr-cover.srfake.fizzle .cr{
+  .ssr-cover.show .cr{animation:qTease .5s ease .34s forwards, qBlink .62s ease-in-out .84s infinite alternate;}
+  @keyframes qTease{0%{opacity:0;transform:scale(.6);}100%{opacity:.5;transform:scale(.86);}}
+  @keyframes qBlink{from{opacity:.32;}to{opacity:.72;}}
+  /* SSR — the real thing bursts in gold */
+  .ssr-cover.resolved.ssrhit .cr{animation:crPop .9s cubic-bezier(.2,1.5,.4,1) forwards;}
+  @keyframes crPop{0%{transform:scale(.55);opacity:0;}34%{transform:scale(1.14);opacity:1;}100%{transform:scale(1);opacity:1;}}
+  /* SR — the let-down: sags and drains to purple */
+  .ssr-cover.resolved.srhit .cr{
     background:linear-gradient(180deg,#E6D8FF,#B15CFF 60%,#7A3FD0);-webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 0 22px rgba(177,92,255,.7));animation:srSag .95s cubic-bezier(.3,.7,.3,1) forwards;}
-  @keyframes srSag{0%{transform:scale(1.12);opacity:1;}28%{transform:scale(.78) translateY(16px) rotate(-4deg);opacity:.85;}
-    55%{transform:scale(.9) translateY(2px) rotate(1deg);opacity:1;}100%{transform:scale(.88);opacity:1;}}
+    filter:drop-shadow(0 0 22px rgba(177,92,255,.7));animation:srSag 1s cubic-bezier(.3,.7,.3,1) forwards;}
+  @keyframes srSag{0%{transform:scale(1.16);opacity:1;}30%{transform:scale(.76) translateY(18px) rotate(-4deg);opacity:.85;}
+    58%{transform:scale(.9) translateY(3px) rotate(1.5deg);opacity:1;}100%{transform:scale(.88);opacity:1;}}
+  .ssr-cover.resolved.srhit .cn{color:#D9C9F5;text-shadow:0 0 18px rgba(177,92,255,.5);}
 
   /* ---------- light mode ---------- */
   @media (prefers-color-scheme: light){
@@ -253,6 +263,8 @@
     .pdim{background:rgba(255,255,255,.55);}
     .ssr-cover .cr{background:linear-gradient(180deg,#FFB43C,#FF8A3D 55%,#E0631A);-webkit-background-clip:text;background-clip:text;}
     .ssr-cover .cn{color:#9A6410;text-shadow:0 0 18px rgba(255,180,60,.5);}
+    .ssr-cover.resolved.srhit .cr{background:linear-gradient(180deg,#B98CFF,#8B4FD8 60%,#5F2FA6);-webkit-background-clip:text;background-clip:text;}
+    .ssr-cover.resolved.srhit .cn{color:#6B4A9E;text-shadow:0 0 16px rgba(140,80,210,.45);}
     .mute{background:rgba(255,255,255,.82);border-color:#DCE4F2;color:#37456B;}
     .winner .wn{-webkit-text-fill-color:#8A5A10;color:#8A5A10;background:none;animation:none;}
     .winner::before{background:rgba(210,150,30,.16);}
@@ -669,36 +681,33 @@
     setTimeout(()=>{ quickFlash('#FFE9A8'); },820);
     setTimeout(()=>{ cs.classList.remove('on'); cs.innerHTML=''; cb&&cb(); },1200);
   }
-  function ssrPillar(person,cb){
-    if(reduce()){ sfx('ssr'); cb&&cb(); return; }
-    sfx('ssr_rise');
+  // Shared big reveal: the NAME lands first ("오 나야?"), the grade resolves after.
+  // SSR and SR are indistinguishable until the very last beat.
+  function bigReveal(person,isSSR,cb){
+    if(reduce()){ sfx(isSSR?'ssr':'reveal_SR'); cb&&cb(); return; }
+    sfx('ssr_rise');                                   // identical tension cue for both
     const p=$('#pillar'); p.classList.add('on');
     p.innerHTML='<div class="pdim"></div><div class="beam"></div>'+
-      '<div class="ssr-cover" id="ssrCover"><div class="cr">SSR</div><div class="cn">'+esc(person.name)+'</div></div>';
+      '<div class="ssr-cover" id="ssrCover"><div class="cn">'+esc(person.name)+'</div><div class="cr">?</div></div>';
     if(navigator.vibrate) navigator.vibrate([20,40,30]);
-    setTimeout(()=>{ quickFlash(RARITY.SSR.color); },520);
-    const cover=p.querySelector('#ssrCover');
-    const cn=cover.querySelector('.cn'); if(cn){ const L=person.name.length; cn.style.fontSize=(L<=4?8:L<=6?6.5:L<=9?5:4)+'vw'; }
-    setTimeout(()=>{ cover.classList.add('show'); sfx('ssr'); if(navigator.vibrate) navigator.vibrate(45); },540);
-    setTimeout(()=>{ p.classList.remove('on'); p.innerHTML=''; cb&&cb(); },1650);
+    const cover=p.querySelector('#ssrCover'), cr=cover.querySelector('.cr'), cn=cover.querySelector('.cn');
+    const L=person.name.length; cn.style.fontSize=(L<=4?11:L<=6?9:L<=9?7:5.5)+'vw';
+    setTimeout(()=>{ quickFlash(RARITY.SSR.color); },480);          // gold flash — reads as a win either way
+    setTimeout(()=>{                                                // ① name lands, "?" teases
+      cover.classList.add('show'); sfx('nameIn');
+      if(navigator.vibrate) navigator.vibrate(40);
+    },500);
+    setTimeout(()=>{                                                // ② the grade resolves
+      cover.classList.add('resolved', isSSR?'ssrhit':'srhit');
+      cr.textContent = isSSR?'SSR':'SR';
+      if(isSSR){ sfx('ssr'); quickFlash(RARITY.SSR.color); if(navigator.vibrate) navigator.vibrate([50,30,90]); }
+      else { sfx('deflate'); quickFlash(RARITY.SR.color); if(navigator.vibrate) navigator.vibrate([60,40,20]); }
+    },1450);
+    setTimeout(()=>{ cover.classList.add('out'); },2320);
+    setTimeout(()=>{ p.classList.remove('on'); p.innerHTML=''; cb&&cb(); },2760);
   }
-  // SR fake-out: identical SSR build-up, then it fizzles down to SR
-  function srFakeout(person,cb){
-    if(reduce()){ sfx('reveal_SR'); cb&&cb(); return; }
-    sfx('ssr_rise');                                  // same tension cue as SSR
-    const p=$('#pillar'); p.classList.add('on');
-    p.innerHTML='<div class="pdim"></div><div class="beam"></div>'+
-      '<div class="ssr-cover srfake" id="ssrCover"><div class="cr">SSR</div></div>';
-    if(navigator.vibrate) navigator.vibrate([20,40,30]);
-    const cover=p.querySelector('#ssrCover'), cr=cover.querySelector('.cr');
-    setTimeout(()=>{ quickFlash(RARITY.SSR.color); },520);   // gold flash — still looks like a win
-    setTimeout(()=>{ cover.classList.add('show'); if(navigator.vibrate) navigator.vibrate(40); },540);
-    setTimeout(()=>{                                          // the let-down
-      sfx('deflate'); cover.classList.add('fizzle'); cr.textContent='SR';
-      quickFlash(RARITY.SR.color); if(navigator.vibrate) navigator.vibrate([60,40,20]);
-    },1080);
-    setTimeout(()=>{ p.classList.remove('on'); p.innerHTML=''; cb&&cb(); },2150);
-  }
+  const ssrPillar=(person,cb)=>bigReveal(person,true,cb);
+  const srFakeout=(person,cb)=>bigReveal(person,false,cb);
 
   // ---- sound (Web Audio, no files) \u2014 grand reverb bus ----
   let actx=null, muted=false, master=null, revConv=null;
@@ -707,7 +716,10 @@
       try{
         const AC=window.AudioContext||window.webkitAudioContext;
         actx=new AC();
-        master=actx.createGain(); master.gain.value=0.9; master.connect(actx.destination);
+        master=actx.createGain(); master.gain.value=1.0;
+        const comp=actx.createDynamicsCompressor();      // keeps it loud without clipping
+        comp.threshold.value=-16; comp.knee.value=22; comp.ratio.value=5; comp.attack.value=0.004; comp.release.value=0.28;
+        master.connect(comp); comp.connect(actx.destination);
         revConv=actx.createConvolver(); revConv.buffer=makeImpulse(3.6,2.6);   // longer cavernous tail
         const rg=actx.createGain(); rg.gain.value=0.98; revConv.connect(rg); rg.connect(master);
       }catch(e){ actx=null; }
@@ -771,6 +783,12 @@
     else if(kind==='reveal_N'){ voice({type:'sine',f:200,dur:0.18,g:0.15,rev:0.25}); voice({type:'sine',f:100,dur:0.16,g:0.1}); }
     else if(kind==='reveal_R'){ [330,440].forEach(f=>voice({type:'triangle',f:f,dur:0.24,g:0.11,rev:0.35})); voice({type:'sine',f:165,dur:0.3,g:0.12,rev:0.3,lp:500}); }
     else if(kind==='reveal_SR'){ [440,554,659].forEach((f,i)=>voice({type:'triangle',f:f,t:t+i*0.02,dur:0.42,g:0.11,rev:0.5})); voice({type:'sine',f:110,f2:220,dur:0.5,g:0.28,rev:0.4,lp:600}); noise({dur:0.4,ft:'highpass',ff:3000,g:0.07,rev:0.5}); }
+    else if(kind==='nameIn'){                               // 이름 등장 — 두근거리는 임팩트 + 서스펜스
+      voice({type:'sine',f:60,f2:180,dur:0.9,a:0.02,g:0.42,rev:0.6,lp:700});
+      noise({dur:0.5,ft:'highpass',ff:3200,g:0.12,rev:0.7});
+      [523.25,783.99,1046.5].forEach((f,i)=>voice({type:'triangle',f:f,t:t+i*0.04,dur:1.3,a:0.02,g:0.09,rev:0.9}));
+      voice({type:'sine',f:1318.5,t:t+0.18,dur:1.1,a:0.02,g:0.07,rev:0.8});
+    }
     else if(kind==='deflate'){                              // 맥 빠지는 하강음 (SR fake-out)
       voice({type:'sawtooth',f:440,f2:70,dur:1.0,a:0.02,g:0.2,rev:0.4,lp:1100});
       voice({type:'sine',f:220,f2:55,dur:1.0,a:0.02,g:0.16,rev:0.35});
@@ -824,12 +842,13 @@
     if(muted) return;
     const bar=Math.floor(step/16)%4, s=step%16, ch=BGM_CH[bar];
     const an=ch.arp[s%4]*(s>=8?2:1);
-    bgmVoice({type:'triangle',f:an,t:t,dur:spb*1.8,g:0.05,a:0.01});                    // arpeggio
-    if(s%4===0) bgmVoice({type:'sine',f:ch.bass,t:t,dur:spb*3.5,g:0.14,a:0.01});        // bass pulse
+    bgmVoice({type:'triangle',f:an,t:t,dur:spb*1.8,g:0.13,a:0.01});                     // arpeggio
+    if(s%4===0) bgmVoice({type:'sine',f:ch.bass,t:t,dur:spb*3.5,g:0.34,a:0.01});         // bass pulse
+    if(s%4===0) bgmVoice({type:'sine',f:ch.bass/2,t:t,dur:spb*3.5,g:0.20,a:0.01});       // sub octave
     if(s===0){ [ch.arp[0],ch.arp[1],ch.arp[2]].forEach(f=>{                              // detuned pad
-      bgmVoice({type:'sawtooth',f:f,t:t,dur:spb*15,g:0.016,a:0.8,det:7});
-      bgmVoice({type:'sawtooth',f:f,t:t,dur:spb*15,g:0.016,a:0.8,det:-7}); }); }
-    if(s===6||s===12) bgmVoice({type:'sine',f:ch.arp[3]*2,t:t,dur:spb*2,g:0.02,a:0.02}); // shimmer
+      bgmVoice({type:'sawtooth',f:f,t:t,dur:spb*15,g:0.04,a:0.8,det:7});
+      bgmVoice({type:'sawtooth',f:f,t:t,dur:spb*15,g:0.04,a:0.8,det:-7}); }); }
+    if(s===6||s===12) bgmVoice({type:'sine',f:ch.arp[3]*2,t:t,dur:spb*2,g:0.055,a:0.02}); // shimmer
   }
   function bgmLoop(){
     if(!bgmOn) return;
@@ -842,7 +861,7 @@
     if(bgmOn) return true;
     bgmOn=true;
     bgmGain=c.createGain(); bgmGain.gain.value=0.0001; bgmGain.connect(master);
-    bgmGain.gain.exponentialRampToValueAtTime(0.34, c.currentTime+1.2);
+    bgmGain.gain.exponentialRampToValueAtTime(0.85, c.currentTime+1.2);
     const send=c.createGain(); send.gain.value=0.45; bgmGain.connect(send); send.connect(revConv);
     bgmStep=0; bgmNext=c.currentTime+0.12; bgmLoop();
     return true;
